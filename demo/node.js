@@ -99,6 +99,7 @@ async function detect(input) {
   // dispose image tensor as we no longer need it
   human.tf.dispose(tensor);
 
+
   // print data to console
   log.data('Results:');
   if (result && result.face && result.face.length > 0) {
@@ -113,7 +114,7 @@ async function detect(input) {
   if (result && result.body && result.body.length > 0) {
     for (let i = 0; i < result.body.length; i++) {
       const body = result.body[i];
-      log.data(`  Body: #${i} score:${body.score} keypoints:${body.keypoints?.length}`);
+      log.data(`  Body: #${i} score:${body.score} keypoints:${body.keypoints.length}`);
     }
   } else {
     log.data('  Body: N/A');
@@ -149,25 +150,28 @@ async function detect(input) {
     const persons = result.persons;
 
     // write result objects to file
-    // fs.writeFileSync('result.json', JSON.stringify(result, null, 2));
+    log.info('Result json file---------------:', 'results'+input.slice(15,-4)+'.json');
+     fs.writeFileSync('results/'+input.slice(15,-4)+'.json', JSON.stringify(result, null, 2));
 
     log.data('Persons:');
     for (let i = 0; i < persons.length; i++) {
       const face = persons[i].face;
       const faceTxt = face ? `score:${face.score} age:${face.age} gender:${face.gender} iris:${face.iris}` : null;
       const body = persons[i].body;
-      const bodyTxt = body ? `score:${body.score} keypoints:${body.keypoints?.length}` : null;
+      const bodyTxt = body ? `score:${body.score} keypoints:${body.keypoints.length}` : null;
       log.data(`  #${i}: Face:${faceTxt} Body:${bodyTxt} LeftHand:${persons[i].hands.left ? 'yes' : 'no'} RightHand:${persons[i].hands.right ? 'yes' : 'no'} Gestures:${persons[i].gestures.length}`);
     }
   }
 
+  
+    
   return result;
 }
 
 async function test() {
   process.on('unhandledRejection', (err) => {
     // @ts-ignore // no idea if exception message is compelte
-    log.error(err?.message || err || 'no error message');
+    log.error(err.message || err || 'no error message');
   });
 
   // test with embedded full body image
@@ -184,12 +188,15 @@ async function test() {
   return result;
 }
 
-async function main() {
+async function detect_image() {
   log.header();
   log.info('Current folder:', process.env.PWD);
   await init();
-  const f = process.argv[2];
-  if (process.argv.length !== 3) {
+  
+  // insert folder image to detect one by one
+  const f = 'assets/students';
+  log.info('image folder:', f);
+ /* if (process.argv.length !== 3) {
     log.warn('Parameters: <input image | folder> missing');
     await test();
   } else if (!fs.existsSync(f) && !f.startsWith('http')) {
@@ -208,7 +215,24 @@ async function main() {
     } else {
       await detect(f);
     }
-  }
+  }*/
+  
+  
+   if (fs.existsSync(f)) {
+      const stat = fs.statSync(f);
+      if (stat.isDirectory()) {
+        const dir = fs.readdirSync(f);
+        for (const file of dir) {
+          const result = await detect(path.join(f, file));
+          
+        }
+      } else {
+        const result = await detect(f);
+      }
+    } else {
+      const result = await detect(f);
+    }
+  
 }
 
-main();
+detect_image();
